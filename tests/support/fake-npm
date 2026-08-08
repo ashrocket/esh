@@ -1,10 +1,19 @@
 #!/bin/zsh
 
 if [[ "$1" == view ]]; then
+  if [[ "$2" == '@esh/fake-cli' ]]; then
+    print -r -- '{"name":"@esh/fake-cli","bin":{"esh-npm-test":"bin/cli.js"}}'
+    exit 0
+  fi
   exit 1
 fi
 
 if [[ "$1" == install ]]; then
+  if [[ "$*" == *'@esh/fake-cli'* ]]; then
+    print -r -- '#!/bin/zsh
+print -r -- "npm-tool-called:$*"' > "$ESH_FAKE_BIN/esh-npm-test"
+    chmod +x "$ESH_FAKE_BIN/esh-npm-test"
+  fi
   print -r -- "npm-called:$*"
   exit 0
 fi

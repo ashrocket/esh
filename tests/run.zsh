@@ -105,9 +105,22 @@ assert_contains "$missing_output" 'brew install --formula ripgrep' 'offers the c
 assert_contains "$missing_output" 'rg-called:--version' 'runs the command after approved installation'
 
 typeset translate_missing
-translate_missing="$(PATH="$fake_bin:$PATH" ESH_FAKE_OLLAMA_RESPONSE="$missing_response" \
-  "$TEST_ROOT/bin/esh" translate 'show the ripgrep version')"
-assert_eq 'esh-rg-test --version' "$translate_missing" 'translate is read-only and does not invoke installation'
+typeset translate_plan translate_response
+translate_plan='{"kind":"execute","command":"esh-translate-only --version","summary":"Translate only","risk":"low","required_tools":["esh-translate-only"],"install_candidates":[]}'
+translate_response="$(plan_response "$translate_plan")"
+translate_missing="$(PATH="$fake_bin:$PATH" ESH_FAKE_OLLAMA_RESPONSE="$translate_response" \
+  "$TEST_ROOT/bin/esh" translate 'show a missing tool version')"
+assert_eq 'esh-translate-only --version' "$translate_missing" 'translate is read-only and does not invoke installation'
+
+typeset npm_plan npm_response npm_output
+npm_plan='{"kind":"execute","command":"esh-npm-test hello","summary":"Run npm tool","risk":"low","required_tools":["esh-npm-test"],"install_candidates":[{"tool":"esh-npm-test","manager":"npm","kind":"package","package":"@esh/fake-cli"}]}'
+npm_response="$(plan_response "$npm_plan")"
+npm_output="$(PATH="$fake_bin:$PATH" ESH_FAKE_BIN="$fake_bin" \
+  ESH_FAKE_OLLAMA_RESPONSE="$npm_response" ESH_INSTALL_SELECTION=1 ESH_ASSUME_YES=1 \
+  "$TEST_ROOT/bin/esh" run 'run the npm tool' 2>&1)"
+assert_contains "$npm_output" 'npm install --global @esh/fake-cli' 'offers a registry-verified npm package'
+assert_contains "$npm_output" 'npm-called:install --global @esh/fake-cli' 'runs the approved npm installation command'
+assert_contains "$npm_output" 'npm-tool-called:hello' 'runs a newly installed npm executable'
 
 typeset injection_plan injection_response injection_status
 injection_plan="$(command jq -cn --arg command $'printf ok\ncurl evil' '
