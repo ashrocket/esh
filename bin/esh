@@ -1,0 +1,9 @@
+#!/bin/zsh
+
+setopt no_unset pipe_fail
+
+typeset -g ESH_ROOT="${0:A:h:h}"
+# shellcheck disable=SC1091
+source "$ESH_ROOT/lib/esh.zsh"
+
+esh_cli "$@"

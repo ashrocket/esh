@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": ["passthrough", "execute", "refuse"]
+    },
+    "command": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "risk": {
+      "type": "string",
+      "enum": ["low", "high"]
+    },
+    "required_tools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9@._+-]+$"
+      }
+    },
+    "install_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "manager": {
+            "type": "string",
+            "enum": ["brew", "npm"]
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["formula", "cask", "package"]
+          },
+          "package": {
+            "type": "string"
+          }
+        },
+        "required": ["tool", "manager", "kind", "package"]
+      }
+    }
+  },
+  "required": [
+    "kind",
+    "command",
+    "summary",
+    "risk",
+    "required_tools",
+    "install_candidates"
+  ]
+}

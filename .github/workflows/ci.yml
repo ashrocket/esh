@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check zsh syntax
+        run: zsh -n esh.plugin.zsh lib/esh.zsh bin/esh install.zsh tests/run.zsh
+      - name: Run offline integration tests
+        run: zsh tests/run.zsh
+      - name: Run interactive widget test
+        run: expect tests/widget.exp
+      - name: Run ShellCheck
+        run: |
+          command -v shellcheck >/dev/null || brew install shellcheck
+          shellcheck -s bash bin/esh

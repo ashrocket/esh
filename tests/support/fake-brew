@@ -1,0 +1,22 @@
+#!/bin/zsh
+
+if [[ "$1" == info ]]; then
+  if [[ "$*" == *ripgrep* || "$*" == *' gh'* || "$*" == *' jq'* || "$*" == *ollama-app* ]]; then
+    print -r -- '{"formulae":[{"name":"verified"}],"casks":[]}'
+    exit 0
+  fi
+  exit 1
+fi
+
+if [[ "$1" == install ]]; then
+  if [[ "$*" == *ripgrep* ]]; then
+    print -r -- '#!/bin/zsh
+print -r -- "rg-called:$*"' > "$ESH_FAKE_BIN/rg"
+    command mv "$ESH_FAKE_BIN/rg" "$ESH_FAKE_BIN/esh-rg-test"
+    chmod +x "$ESH_FAKE_BIN/esh-rg-test"
+  fi
+  print -r -- "brew-called:$*"
+  exit 0
+fi
+
+exit 1

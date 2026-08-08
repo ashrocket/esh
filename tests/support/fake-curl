@@ -1,0 +1,7 @@
+#!/bin/zsh
+
+if [[ "$*" == *'/api/tags'* ]]; then
+  print -r -- '{"models":[{"name":"qwen3:4b-instruct","model":"qwen3:4b-instruct"}]}'
+else
+  print -r -- "$ESH_FAKE_OLLAMA_RESPONSE"
+fi

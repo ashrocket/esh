@@ -1,0 +1,43 @@
+#!/usr/bin/expect -f
+
+# Exercises the real ZLE Enter-key binding in a pseudo-terminal.
+set timeout 15
+set test_dir [file dirname [file normalize [info script]]]
+set root [file dirname $test_dir]
+set fake_bin "/private/tmp/esh-widget.[pid]"
+file mkdir $fake_bin
+
+set curl [open [file join $fake_bin curl] w]
+puts $curl {#!/bin/zsh
+print -r -- '{"message":{"role":"assistant","content":"{\"kind\":\"execute\",\"command\":\"gh repo list\",\"summary\":\"List GitHub repositories\",\"risk\":\"low\",\"required_tools\":[\"gh\"],\"install_candidates\":[]}"},"done":true}'}
+close $curl
+
+set gh [open [file join $fake_bin gh] w]
+puts $gh {#!/bin/zsh
+print -r -- "gh-called:$*"}
+close $gh
+file attributes [file join $fake_bin curl] -permissions 0755
+file attributes [file join $fake_bin gh] -permissions 0755
+
+set env(PATH) "$fake_bin:$env(PATH)"
+set env(TERM) xterm-256color
+
+spawn zsh -df
+send -- "PS1='ESH> '\r"
+expect "ESH> "
+send -- "source '$root/esh.plugin.zsh'\r"
+expect "ESH> "
+send -- "gh list repositories\r"
+expect {
+  -re {gh repo list.*gh-called:repo list} {}
+  timeout {
+    puts stderr "translated command or execution output was not observed"
+    exit 1
+  }
+}
+expect "ESH> "
+send -- "exit\r"
+expect eof
+
+file delete -force $fake_bin
+puts "widget integration passed"

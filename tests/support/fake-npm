@@ -1,0 +1,12 @@
+#!/bin/zsh
+
+if [[ "$1" == view ]]; then
+  exit 1
+fi
+
+if [[ "$1" == install ]]; then
+  print -r -- "npm-called:$*"
+  exit 0
+fi
+
+exit 1
