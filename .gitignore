@@ -1,3 +1,5 @@
 .DS_Store
 *.log
 .esh-test-*
+benchmarks/results/
+__pycache__/

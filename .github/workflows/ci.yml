@@ -16,6 +16,10 @@ jobs:
         run: zsh -n esh.plugin.zsh lib/esh.zsh bin/esh install.zsh tests/run.zsh
       - name: Run offline integration tests
         run: zsh tests/run.zsh
+      - name: Validate benchmark fixtures
+        run: |
+          python3 benchmarks/runner.py validate
+          python3 -m unittest discover -s benchmarks/tests
       - name: Run interactive widget test
         run: expect tests/widget.exp
       - name: Run ShellCheck

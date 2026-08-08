@@ -1,0 +1,131 @@
+name: Free model benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Free Ollama model to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - ollama-gemma3-270m
+          - ollama-qwen3-0.6b
+          - ollama-gemma3-1b
+          - ollama-qwen3-1.7b
+          - ollama-qwen3-4b-instruct
+          - ollama-qwen3-8b
+      limit:
+        description: Number of requests per model (1-100)
+        required: true
+        default: "100"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: free-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python3 benchmarks/runner.py validate
+      - run: python3 -m unittest discover -s benchmarks/tests
+      - name: Validate inputs and select matrix
+        id: select
+        env:
+          REQUESTED_MODEL: ${{ inputs.model }}
+          REQUEST_LIMIT: ${{ inputs.limit }}
+        run: |
+          python3 -c 'import os; value = int(os.environ["REQUEST_LIMIT"]); assert 1 <= value <= 100, "limit must be from 1 to 100"'
+          python3 -c 'import json, os; all_models = ["ollama-gemma3-270m", "ollama-qwen3-0.6b", "ollama-gemma3-1b", "ollama-qwen3-1.7b", "ollama-qwen3-4b-instruct", "ollama-qwen3-8b"]; requested = os.environ["REQUESTED_MODEL"]; selected = all_models if requested == "all" else [requested]; print("matrix=" + json.dumps({"model": selected}, separators=(",", ":")))' >> "$GITHUB_OUTPUT"
+
+  benchmark:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Ollama release
+        env:
+          OLLAMA_VERSION: v0.32.6
+        run: |
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --remote-name \
+            "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst"
+          echo 'dec2fa50d24e6868ca3c4c977d69d059399372105f951a9acc320a5a79aadcfc  ollama-linux-amd64.tar.zst' \
+            | sha256sum --check -
+          sudo tar --zstd -xf ollama-linux-amd64.tar.zst -C /usr
+
+      - name: Start Ollama and pull model
+        env:
+          OLLAMA_HOST: http://127.0.0.1:11434
+        run: |
+          OLLAMA_MODEL="$(python3 -c 'import json, sys; models = json.load(open("benchmarks/models.json"))["models"]; print(next(item["model"] for item in models if item["id"] == sys.argv[1]))' "${{ matrix.model }}")"
+          echo "OLLAMA_MODEL=$OLLAMA_MODEL" >> "$GITHUB_ENV"
+          ollama serve >"$RUNNER_TEMP/ollama.log" 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent "$OLLAMA_HOST/api/tags" >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == 30 ]]; then
+              cat "$RUNNER_TEMP/ollama.log"
+              exit 1
+            fi
+            sleep 2
+          done
+          ollama pull "$OLLAMA_MODEL"
+          {
+            ollama --version
+            ollama list
+            ollama show "$OLLAMA_MODEL"
+          } > "$RUNNER_TEMP/model.txt"
+
+      - name: Run benchmark
+        env:
+          OLLAMA_HOST: http://127.0.0.1:11434
+        run: |
+          mkdir -p benchmark-results
+          python3 benchmarks/runner.py run \
+            --model "${{ matrix.model }}" \
+            --limit "${{ inputs.limit }}" \
+            --output "benchmark-results/${{ matrix.model }}.jsonl"
+
+      - name: Render report
+        if: always()
+        run: |
+          if [[ -s "benchmark-results/${{ matrix.model }}.jsonl" ]]; then
+            python3 benchmarks/runner.py report \
+              "benchmark-results/${{ matrix.model }}.jsonl" \
+              --output "benchmark-results/${{ matrix.model }}.md"
+          fi
+
+      - name: Upload result and provenance
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-${{ matrix.model }}
+          if-no-files-found: error
+          path: |
+            benchmark-results/${{ matrix.model }}.jsonl
+            benchmark-results/${{ matrix.model }}.md
+            ${{ runner.temp }}/model.txt
+            ${{ runner.temp }}/ollama.log

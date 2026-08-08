@@ -78,6 +78,10 @@ expect tests/widget.exp # optional PTY verification on macOS
 
 The integration tests are offline and replace Ollama, GitHub CLI, Homebrew, and npm with deterministic fakes.
 
+## Model benchmark
+
+The repository also includes a reproducible [100-request, ten-model benchmark](benchmarks/README.md): six local Ollama models that can run in a manual free GitHub Actions workflow, plus four paid-provider adapters behind an explicit gate. This research harness is separate from Esh runtime behavior; generated benchmark commands are scored as data and never executed.
+
 ## License
 
 MIT
