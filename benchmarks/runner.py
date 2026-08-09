@@ -603,7 +603,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
         if args.output
         else BENCHMARK_ROOT
         / "results"
-        / f"run-{dt.datetime.now(dt.UTC).strftime('%Y%m%dT%H%M%SZ')}.jsonl"
+        / f"run-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.jsonl"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     completed = read_completed(output) if args.resume else set()
@@ -632,6 +632,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
                             schema,
                             args.timeout,
                         )
+                        error = None
                         break
                     except (
                         BenchmarkError,
@@ -657,7 +658,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
                 )
                 row = {
                     "schema_version": 1,
-                    "timestamp": dt.datetime.now(dt.UTC).isoformat(),
+                    "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
                     "model_id": model["id"],
                     "provider": model["provider"],
                     "model": model["model"],

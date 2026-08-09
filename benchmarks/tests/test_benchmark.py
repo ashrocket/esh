@@ -229,6 +229,40 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual("pwd", row["plan"]["command"])
             self.assertEqual("fixture", row["response_id"])
 
+    def test_run_clears_error_after_a_successful_retry(self):
+        plan = {
+            "kind": "execute",
+            "command": "pwd",
+            "summary": "Show current directory",
+            "risk": "low",
+            "required_tools": [],
+            "install_candidates": [],
+        }
+        provider_result = runner.ProviderResult(
+            json.dumps(plan), {"input_tokens": 10, "output_tokens": 5}, "fixture"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "result.jsonl"
+            args = Namespace(
+                model=["ollama-gemma3-270m"],
+                allow_paid=False,
+                limit=1,
+                output=str(output),
+                resume=False,
+                repeat=1,
+                retries=1,
+                timeout=5,
+            )
+            with patch.object(runner.time, "sleep", return_value=None), patch.object(
+                runner,
+                "invoke_model",
+                side_effect=[runner.BenchmarkError("transient"), provider_result],
+            ):
+                runner.run_benchmark(args)
+            row = json.loads(output.read_text(encoding="utf-8"))
+            self.assertIsNone(row["error"])
+            self.assertEqual(100, row["score"]["total"])
+
     def test_result_loader_rejects_empty_files(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "empty.jsonl"

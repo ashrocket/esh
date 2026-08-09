@@ -197,19 +197,38 @@ _esh_primary_tool() {
   return 1
 }
 
+_esh_pad_operators() {
+  # Insert spaces around command separators so a chained or substituted
+  # command cannot hide a dangerous word from the checks below by omitting
+  # whitespace, e.g. "true;rm -rf ." or "$(rm -rf /)".
+  local text=" ${1:l} "
+  text="${text//;/ ; }"
+  text="${text//&/ & }"
+  text="${text//[(]/ ( }"
+  text="${text//[)]/ ) }"
+  print -r -- "$text"
+}
+
 _esh_is_install_command() {
-  local padded=" ${1:l} "
+  local padded
+  padded="$(_esh_pad_operators "$1")"
   [[ "$padded" == *' brew install '* ||
      "$padded" == *' npm install '* ||
      "$padded" == *' npm i '* ||
      "$padded" == *' npm add '* ||
      "$padded" == *' npx '* ||
      "$padded" == *' pnpm add '* ||
-     "$padded" == *' yarn add '* ]]
+     "$padded" == *' yarn add '* ||
+     "$padded" == *' pip install '* ||
+     "$padded" == *' pip3 install '* ||
+     "$padded" == *' gem install '* ||
+     "$padded" == *' cargo install '* ||
+     "$padded" == *' go install '* ]]
 }
 
 _esh_is_high_risk() {
-  local padded=" ${1:l} "
+  local padded
+  padded="$(_esh_pad_operators "$1")"
   [[ "$padded" == *' sudo '* ||
      "$padded" == *' doas '* ||
      "$padded" == *' rm '* ||
@@ -291,8 +310,10 @@ _esh_verify_npm() {
   metadata="$(command npm view "$package" name bin --json 2>/dev/null)" || return 1
   print -r -- "$metadata" | command jq -e --arg tool "$tool" '
     (.name | type == "string") and
-    (.bin | type == "object") and
-    (.bin | has($tool))
+    (
+      ((.bin | type == "object") and (.bin | has($tool))) or
+      ((.bin | type == "string") and ((.name | split("/") | last) == $tool))
+    )
   ' >/dev/null 2>&1
 }
 
@@ -592,7 +613,7 @@ _esh_setup() {
 }
 
 _esh_doctor() {
-  local failed=0
+  local failed=0 tool
 
   printf '%-12s %s\n' zsh "$ZSH_VERSION"
   for tool in curl jq brew npm ollama; do
