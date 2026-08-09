@@ -74,3 +74,7 @@ Supported key variables are `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GEMINI_A
 ## Result format
 
 JSONL rows preserve the case, returned plan, raw model text, latency, token usage, estimated cost when known, score components, response id, and runner provenance. They contain no credential values. Results are ignored by Git so experiments do not silently become product fixtures.
+
+## Published baselines
+
+- [Free Ollama models on GitHub Actions, 2026-08-08](baselines/2026-08-08-free-github-actions.md) — five complete 100-request runs and one retained timeout diagnostic
