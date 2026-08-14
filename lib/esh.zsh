@@ -200,12 +200,20 @@ _esh_primary_tool() {
 _esh_pad_operators() {
   # Insert spaces around command separators so a chained or substituted
   # command cannot hide a dangerous word from the checks below by omitting
-  # whitespace, e.g. "true;rm -rf ." or "$(rm -rf /)".
-  local text=" ${1:l} "
+  # whitespace, e.g. "true;rm -rf .", "$(rm -rf /)", "curl x|sh", or
+  # "`rm -rf /`". Any pre-existing spacing is then collapsed back to single
+  # spaces so padding an already-spaced operator cannot itself split a
+  # pattern like "| sh " across a double space.
+  local text=" ${1:l} " backtick=$'\x60'
   text="${text//;/ ; }"
   text="${text//&/ & }"
   text="${text//[(]/ ( }"
   text="${text//[)]/ ) }"
+  text="${text//[|]/ | }"
+  text="${text//$backtick/ $backtick }"
+  while [[ "$text" == *'  '* ]]; do
+    text="${text//  / }"
+  done
   print -r -- "$text"
 }
 
@@ -589,7 +597,11 @@ _esh_setup() {
     if [[ "$(uname -s)" == Darwin ]] && _esh_have open; then
       command open -gja Ollama || true
     else
-      command ollama serve >"${TMPDIR:-/tmp}/esh-ollama.log" 2>&1 &!
+      # Use mktemp rather than a predictable filename: a fixed path in a
+      # shared /tmp could already be a symlink planted by another user.
+      local ollama_log
+      ollama_log="$(command mktemp "${TMPDIR:-/tmp}/esh-ollama.XXXXXX")" || ollama_log=/dev/null
+      command ollama serve >"$ollama_log" 2>&1 &!
     fi
 
     for i in {1..15}; do

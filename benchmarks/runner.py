@@ -574,11 +574,23 @@ def read_completed(path: Path) -> set[tuple[str, str, int]]:
     if not path.exists():
         return set()
     completed: set[tuple[str, str, int]] = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), 1
+    ):
         if not line.strip():
             continue
-        row = json.loads(line)
-        completed.add((row["model_id"], row["case_id"], int(row["repetition"])))
+        try:
+            row = json.loads(line)
+            completed.add((row["model_id"], row["case_id"], int(row["repetition"])))
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            # A run that was interrupted mid-write can leave a truncated
+            # final line. Skip it so --resume retries that request instead
+            # of crashing on state from an unfinished previous run.
+            print(
+                f"benchmark: ignoring unreadable line {line_number} in {path} "
+                "(resume will retry it)",
+                file=sys.stderr,
+            )
     return completed
 
 
