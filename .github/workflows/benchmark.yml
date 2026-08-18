@@ -48,7 +48,20 @@ jobs:
           REQUEST_LIMIT: ${{ inputs.limit }}
         run: |
           python3 -c 'import os; value = int(os.environ["REQUEST_LIMIT"]); assert 1 <= value <= 100, "limit must be from 1 to 100"'
-          python3 -c 'import json, os; all_models = ["ollama-gemma3-270m", "ollama-qwen3-0.6b", "ollama-gemma3-1b", "ollama-qwen3-1.7b", "ollama-qwen3-4b-instruct", "ollama-qwen3-8b"]; requested = os.environ["REQUESTED_MODEL"]; selected = all_models if requested == "all" else [requested]; print("matrix=" + json.dumps({"model": selected}, separators=(",", ":")))' >> "$GITHUB_OUTPUT"
+          python3 -c '
+          import json, os, sys
+          all_models = ["ollama-gemma3-270m", "ollama-qwen3-0.6b", "ollama-gemma3-1b", "ollama-qwen3-1.7b", "ollama-qwen3-4b-instruct", "ollama-qwen3-8b"]
+          requested = os.environ["REQUESTED_MODEL"]
+          # Reject anything outside the fixed roster: the "type: choice" input
+          # is only enforced by the dispatch UI, not by the workflow_dispatch
+          # API, and this value is later spliced into run: shell steps via
+          # matrix.model, so an unchecked string here would be a script
+          # injection vector.
+          if requested != "all" and requested not in all_models:
+              sys.exit(f"unknown model: {requested}")
+          selected = all_models if requested == "all" else [requested]
+          print("matrix=" + json.dumps({"model": selected}, separators=(",", ":")))
+          ' >> "$GITHUB_OUTPUT"
 
   benchmark:
     needs: validate

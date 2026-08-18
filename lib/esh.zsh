@@ -200,16 +200,17 @@ _esh_primary_tool() {
 _esh_pad_operators() {
   # Insert spaces around command separators so a chained or substituted
   # command cannot hide a dangerous word from the checks below by omitting
-  # whitespace, e.g. "true;rm -rf .", "$(rm -rf /)", "curl x|sh", or
-  # "`rm -rf /`". Any pre-existing spacing is then collapsed back to single
-  # spaces so padding an already-spaced operator cannot itself split a
-  # pattern like "| sh " across a double space.
+  # whitespace, e.g. "true;rm -rf .", "$(rm -rf /)", "curl x|sh",
+  # "`rm -rf /`", or "cmd>/dev/sda". Any pre-existing spacing is then
+  # collapsed back to single spaces so padding an already-spaced operator
+  # cannot itself split a pattern like "| sh " across a double space.
   local text=" ${1:l} " backtick=$'\x60'
   text="${text//;/ ; }"
   text="${text//&/ & }"
   text="${text//[(]/ ( }"
   text="${text//[)]/ ) }"
   text="${text//[|]/ | }"
+  text="${text//>/ > }"
   text="${text//$backtick/ $backtick }"
   while [[ "$text" == *'  '* ]]; do
     text="${text//  / }"
@@ -254,6 +255,7 @@ _esh_is_high_risk() {
      "$padded" == *' curl '*'| sh '* ||
      "$padded" == *' curl '*'| bash '* ||
      "$padded" == *' wget '*'| sh '* ||
+     "$padded" == *' wget '*'| bash '* ||
      "$padded" == *'> /dev/'* ]]
 }
 
