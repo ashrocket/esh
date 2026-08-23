@@ -254,8 +254,26 @@ _esh_is_high_risk() {
      "$padded" == *' kill -9 '* ||
      "$padded" == *' curl '*'| sh '* ||
      "$padded" == *' curl '*'| bash '* ||
+     "$padded" == *' curl '*'| zsh '* ||
+     "$padded" == *' curl '*'| dash '* ||
+     "$padded" == *' curl '*'| ksh '* ||
+     "$padded" == *' curl '*'| /bin/sh '* ||
+     "$padded" == *' curl '*'| /bin/bash '* ||
+     "$padded" == *' curl '*'| /bin/zsh '* ||
+     "$padded" == *' curl '*'| /bin/dash '* ||
+     "$padded" == *' curl '*'| /usr/bin/env sh '* ||
+     "$padded" == *' curl '*'| /usr/bin/env bash '* ||
      "$padded" == *' wget '*'| sh '* ||
      "$padded" == *' wget '*'| bash '* ||
+     "$padded" == *' wget '*'| zsh '* ||
+     "$padded" == *' wget '*'| dash '* ||
+     "$padded" == *' wget '*'| ksh '* ||
+     "$padded" == *' wget '*'| /bin/sh '* ||
+     "$padded" == *' wget '*'| /bin/bash '* ||
+     "$padded" == *' wget '*'| /bin/zsh '* ||
+     "$padded" == *' wget '*'| /bin/dash '* ||
+     "$padded" == *' wget '*'| /usr/bin/env sh '* ||
+     "$padded" == *' wget '*'| /usr/bin/env bash '* ||
      "$padded" == *'> /dev/'* ]]
 }
 
