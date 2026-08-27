@@ -173,6 +173,21 @@ def validate_models(models: list[dict[str, Any]]) -> list[str]:
                 )
         if tier == "paid-api" and not isinstance(model.get("api_key_env"), str):
             errors.append(f"{prefix} paid models must name an api_key_env")
+        pricing = model.get("pricing_usd_per_million_tokens")
+        if pricing is not None and (
+            not isinstance(pricing, dict)
+            or set(pricing) != {"input", "output"}
+            or not all(
+                isinstance(pricing.get(key), (int, float))
+                and not isinstance(pricing.get(key), bool)
+                and pricing.get(key) >= 0
+                for key in ("input", "output")
+            )
+        ):
+            errors.append(
+                f"{prefix} pricing_usd_per_million_tokens must be null or an object "
+                "with non-negative numeric input/output"
+            )
     if free_count != 6:
         errors.append(f"expected exactly 6 free-cloud models, found {free_count}")
     if tier_counts != {"free-local": 6, "paid-api": 4}:

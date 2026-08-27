@@ -43,6 +43,15 @@ class BenchmarkTests(unittest.TestCase):
         errors = runner.validate_models(models)
         self.assertTrue(any("excluded" in error for error in errors))
 
+    def test_malformed_pricing_is_rejected(self):
+        models = runner.load_models()
+        models[0] = {
+            **models[0],
+            "pricing_usd_per_million_tokens": {"input": 1.0},
+        }
+        errors = runner.validate_models(models)
+        self.assertTrue(any("pricing_usd_per_million_tokens" in error for error in errors))
+
     def test_perfect_plan_scores_100(self):
         case = runner.load_cases()[0]
         plan = {
