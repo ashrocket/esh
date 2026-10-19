@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  merge_group:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,17 +14,29 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Test change scoping
+        run: python3 -I -m unittest discover -s .github/ci/tests -v
+      - name: Determine test scope
+        id: scope
+        run: python3 -I .github/ci/ci_scope.py
       - name: Check zsh syntax
+        if: steps.scope.outputs.full != 'false'
         run: zsh -n esh.plugin.zsh lib/esh.zsh bin/esh install.zsh tests/run.zsh
       - name: Run offline integration tests
+        if: steps.scope.outputs.full != 'false'
         run: zsh tests/run.zsh
       - name: Validate benchmark fixtures
+        if: steps.scope.outputs.full != 'false'
         run: |
           python3 benchmarks/runner.py validate
           python3 -m unittest discover -s benchmarks/tests
       - name: Run interactive widget test
+        if: steps.scope.outputs.full != 'false'
         run: expect tests/widget.exp
       - name: Run ShellCheck
+        if: steps.scope.outputs.full != 'false'
         run: |
           command -v shellcheck >/dev/null || brew install shellcheck
           shellcheck -s bash bin/esh
